@@ -1,116 +1,77 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import AnimatedPage from '@/components/shared/AnimatedPage';
-import PageHeader from '@/components/shared/PageHeader';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
+import AdminLayout from '@/components/admin/AdminLayout';
+import TablesManager from '@/components/admin/TablesManager';
+import AppearanceManager from '@/components/admin/AppearanceManager';
+import TypographyManager from '@/components/admin/TypographyManager';
+import DragDropManager from '@/components/admin/DragDropManager';
+import UsersManager from '@/components/admin/UsersManager';
+import { useTheme } from '@/context/ThemeContext';
 
 const Admin = () => {
-  const { toast } = useToast();
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  // جلب الرسائل من API
-  const fetchMessages = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/contact/messages');
-      if (!response.ok) throw new Error('فشل في جلب الرسائل');
-      const data = await response.json();
-      setMessages(data);
-    } catch (error) {
-      toast({
-        title: 'خطأ',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
+  const { pageBackgrounds, pageTypography } = useTheme();
+  const bg = pageBackgrounds.Admin || '#ffffff';
+  const typography = {
+    fontFamily: 'sans-serif',
+    color: '#000',
+    fontSize: '16px',
+    fontWeight: 'normal',
+    textAlign: 'left',
+    ...pageTypography.Admin
   };
 
-  // حذف رسالة
-  const handleDelete = async (id) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذه الرسالة؟')) return;
-    try {
-      const response = await fetch(`/api/contact/messages/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('فشل في حذف الرسالة');
-      toast({
-        title: 'تم الحذف',
-        description: 'تم حذف الرسالة بنجاح',
-      });
-      // تحديث القائمة بعد الحذف
-      setMessages((prev) => prev.filter((msg) => msg.id !== id));
-    } catch (error) {
-      toast({
-        title: 'خطأ',
-        description: error.message,
-        variant: 'destructive',
-      });
-    }
-  };
+  const [activeTab, setActiveTab] = useState("tables");
+  const [currentUserRole, setCurrentUserRole] = useState(localStorage.getItem("userRole") || "guest");
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchMessages();
-  }, []);
+    const isLoggedIn = localStorage.getItem("adminLoggedIn");
+    if (!isLoggedIn) {
+      navigate("/admin-login");
+    }
+  }, [navigate]);
+
+  const renderActiveComponent = () => {
+    switch (activeTab) {
+      case "tables":
+        return <TablesManager />;
+      case "appearance":
+        return <AppearanceManager />;
+      case "typography":
+        return <TypographyManager />;
+      case "dragdrop":
+        return <DragDropManager />;
+      case "users":
+        return <UsersManager />;
+      default:
+        return <TablesManager />;
+    }
+  };
 
   return (
-    <AnimatedPage>
+    <>
       <Helmet>
-        <title>لوحة الإدارة | مطعم الأصالة</title>
-        <meta name="description" content="إدارة رسائل التواصل الخاصة بمطعم الأصالة." />
+        <title>لوحة الإدارة | مطعم كوكو</title>
+        <meta name="description" content="لوحة التحكم الشاملة لإدارة مطعم كوكو" />
       </Helmet>
 
-      <PageHeader
-        title="لوحة الإدارة"
-        subtitle="إدارة رسائل التواصل الواردة"
-      />
-
-      <div className="overflow-x-auto">
-        {loading ? (
-          <p>جاري التحميل...</p>
-        ) : (
-          <table className="min-w-full table-auto border-collapse border border-gray-300">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border border-gray-300 px-4 py-2">الاسم</th>
-                <th className="border border-gray-300 px-4 py-2">البريد الإلكتروني</th>
-                <th className="border border-gray-300 px-4 py-2">الهاتف</th>
-                <th className="border border-gray-300 px-4 py-2">الموضوع</th>
-                <th className="border border-gray-300 px-4 py-2">الرسالة</th>
-                <th className="border border-gray-300 px-4 py-2">التاريخ</th>
-                <th className="border border-gray-300 px-4 py-2">إجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {messages.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="text-center py-4">لا توجد رسائل</td>
-                </tr>
-              ) : (
-                messages.map(({ id, name, email, phone, subject, message, created_at }) => (
-                  <tr key={id} className="hover:bg-gray-50">
-                    <td className="border border-gray-300 px-4 py-2">{name}</td>
-                    <td className="border border-gray-300 px-4 py-2">{email}</td>
-                    <td className="border border-gray-300 px-4 py-2">{phone}</td>
-                    <td className="border border-gray-300 px-4 py-2">{subject}</td>
-                    <td className="border border-gray-300 px-4 py-2 max-w-xs truncate" title={message}>{message}</td>
-                    <td className="border border-gray-300 px-4 py-2">{new Date(created_at).toLocaleString('ar-EG')}</td>
-                    <td className="border border-gray-300 px-4 py-2 text-center">
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(id)}>
-                        حذف
-                      </Button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        )}
+      <div
+        style={{
+          background: bg,
+          fontFamily: typography.fontFamily,
+          color: typography.color,
+          fontSize: typography.fontSize,
+          fontWeight: typography.fontWeight,
+          textAlign: typography.textAlign,
+          minHeight: '100vh',
+        }}
+      >
+        <AdminLayout activeTab={activeTab} setActiveTab={setActiveTab} currentUserRole={currentUserRole}>
+          {renderActiveComponent()}
+        </AdminLayout>
       </div>
-    </AnimatedPage>
+    </>
   );
 };
 

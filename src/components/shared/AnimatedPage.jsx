@@ -22,7 +22,7 @@ const pageTransition = {
   duration: 0.5
 };
 
-const AnimatedPage = ({ children }) => {
+const AnimatedPage = ({ children, ...props }) => { 
   return (
     <motion.div
       initial="initial"
@@ -30,6 +30,7 @@ const AnimatedPage = ({ children }) => {
       exit="out"
       variants={pageVariants}
       transition={pageTransition}
+      {...props} 
     >
       {children}
     </motion.div>

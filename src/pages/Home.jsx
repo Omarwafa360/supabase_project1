@@ -1,100 +1,265 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import AnimatedPage from '@/components/shared/AnimatedPage';
 import PageHeader from '@/components/shared/PageHeader';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from '@/context/ThemeContext';
+import { supabase } from '@/supabaseClient';
+
+const variants = {
+  enter: (direction) => ({
+    x: direction > 0 ? 300 : -300,
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+  },
+  exit: (direction) => ({
+    x: direction < 0 ? 300 : -300,
+    opacity: 0,
+  }),
+};
 
 const Home = () => {
-  const [hero, setHero] = useState(null);
+  const { pageBackgrounds, pageTypography } = useTheme();
+  const bg = pageBackgrounds?.Home || '#ffffff';
+  const typography = pageTypography?.Home || {};
+
+  const [heroImages, setHeroImages] = useState([]);
+  const [[page, direction], setPage] = useState([0, 0]);
+  const interactionRef = useRef(false);
+  const timeoutRef = useRef(null);
+
   const [services, setServices] = useState([]);
   const [menuPreview, setMenuPreview] = useState(null);
   const [testimonials, setTestimonials] = useState([]);
 
   useEffect(() => {
-    // جلب بيانات home_hero
-    fetch('/api/home/hero')
-      .then(res => res.json())
-      .then(data => setHero(data))
-      .catch(console.error);
+    const fetchData = async () => {
+      try {
+        const { data: heroData, error: heroError } = await supabase.from('home_hero').select('*');
+        if (heroError) throw heroError;
+        setHeroImages(heroData || []);
 
-    // جلب بيانات home_services
-    fetch('/api/home/services')
-      .then(res => res.json())
-      .then(data => setServices(data))
-      .catch(console.error);
+        const { data: servicesData, error: servicesError } = await supabase.from('home_services').select('*');
+        if (servicesError) throw servicesError;
+        setServices(servicesData || []);
 
-    // جلب بيانات home_menu_preview
-    fetch('/api/home/menu_preview')
-      .then(res => res.json())
-      .then(data => setMenuPreview(data))
-      .catch(console.error);
+        const { data: menuData, error: menuError } = await supabase.from('home_menu_preview').select('*');
+        if (menuError) throw menuError;
+        setMenuPreview(menuData?.[0] || null);
 
-    // جلب بيانات home_testimonials
-    fetch('/api/home/testimonials')
-      .then(res => res.json())
-      .then(data => setTestimonials(data))
-      .catch(console.error);
+        const { data: testimonialsData, error: testimonialsError } = await supabase.from('home_testimonials').select('*');
+        if (testimonialsError) throw testimonialsError;
+        setTestimonials(testimonialsData || []);
+      } catch (error) {
+        console.error('Supabase fetch error:', error.message);
+      }
+    };
+
+    fetchData();
   }, []);
 
+  const imageIndex = heroImages.length > 0 ? ((page % heroImages.length) + heroImages.length) % heroImages.length : 0;
+
+  const paginate = (newDirection) => {
+    setPage([page + newDirection, newDirection]);
+    interactionRef.current = true;
+    clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      interactionRef.current = false;
+      autoPlay();
+    }, 10000);
+  };
+
+  const autoPlay = () => {
+    if (!interactionRef.current) {
+      setPage(([prevPage]) => [prevPage + 1, 1]);
+    }
+  };
+
+  useEffect(() => {
+    timeoutRef.current = setTimeout(() => {
+      autoPlay();
+    }, 5000);
+
+    return () => clearTimeout(timeoutRef.current);
+  }, [page]);
+
   return (
-    <AnimatedPage>
+    <AnimatedPage
+      style={{
+        background: bg,
+        fontFamily: typography.fontFamily || 'sans-serif',
+        color: typography.color || '#000',
+        fontSize: typography.fontSize,
+        fontWeight: typography.fontWeight,
+        textAlign: typography.textAlign,
+        minHeight: '100vh',
+      }}
+    >
       <Helmet>
-        <title>{hero?.title || 'مطعم الأصالة'}</title>
-        <meta name="description" content={hero?.description || 'أفضل الأطباق الشرقية'} />
+        <title>{heroImages[imageIndex]?.title || 'مطعم الأصالة'}</title>
+        <meta
+          name="description"
+          content={heroImages[imageIndex]?.description || 'أفضل الأطباق الشرقية'}
+        />
       </Helmet>
 
-      <PageHeader title={hero?.title || 'مرحبًا بكم في مطعم الأصالة'} subtitle={hero?.description || 'ألذ الأطباق الشرقية بانتظاركم'} />
+      <PageHeader
+        title={heroImages[imageIndex]?.title || 'مرحبًا بكم في مطعم الأصالة'}
+        subtitle={heroImages[imageIndex]?.description || 'ألذ الأطباق الشرقية بانتظاركم'}
+      />
 
-      {/* قسم الهيرو */}
-      {hero && (
-        <section className="hero-section">
-          <img src={hero.image_url} alt={hero.title} className="w-full h-auto rounded-lg" />
-        </section>
-      )}
+      {/* Hero Carousel */}
+      <section
+        className="hero-section mt-6"
+        style={{ position: 'relative', width: '100%', height: '70vh', overflow: 'hidden' }}
+      >
+        <AnimatePresence initial={false} custom={direction}>
+          {heroImages.length > 0 && (
+            <motion.img
+              key={page}
+              src={heroImages[imageIndex]?.image_url || ''}
+              alt={heroImages[imageIndex]?.title || 'Hero Image'}
+              custom={direction}
+              variants={variants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.5 }}
+              style={{
+                position: 'absolute',
+                width: '90vw',
+                height: '70vh',
+                objectFit: 'cover',
+                borderRadius: 10,
+                margin: 'auto',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }}
+              draggable={false}
+            />
+          )}
+        </AnimatePresence>
 
-      {/* قسم الخدمات */}
+        {heroImages.length > 1 && (
+          <>
+            <button
+              onClick={() => paginate(-1)}
+              aria-label="السابق"
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: 20,
+                transform: 'translateY(-50%)',
+                background: 'rgba(0,0,0,0.5)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: 40,
+                height: 40,
+                cursor: 'pointer',
+                fontSize: 24,
+                zIndex: 10,
+              }}
+            >
+              ‹
+            </button>
+            <button
+              onClick={() => paginate(1)}
+              aria-label="التالي"
+              style={{
+                position: 'absolute',
+                top: '50%',
+                right: 20,
+                transform: 'translateY(-50%)',
+                background: 'rgba(0,0,0,0.5)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: 40,
+                height: 40,
+                cursor: 'pointer',
+                fontSize: 24,
+                zIndex: 10,
+              }}
+            >
+              ›
+            </button>
+          </>
+        )}
+      </section>
+
+      {/* Services Section */}
       {services.length > 0 && (
-        <section className="services-section grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">
-          {services.map(service => (
-            <motion.div key={service.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+        <section className="services-section grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 px-4 md:px-0">
+          {services.map((service) => (
+            <motion.div
+              key={service.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="bg-white p-6 rounded-lg shadow-md"
+            >
               <div className="service-icon mb-4">
-                <img src={service.icon_url} alt={service.service_title} className="w-12 h-12 mx-auto" />
+                <img src={service.icon_url || ''} alt={service.service_title || 'Service Icon'} className="w-12 h-12 mx-auto" />
               </div>
-              <h3 className="text-xl font-semibold text-center">{service.service_title}</h3>
+              <h3 className="text-xl font-semibold text-center mb-2">{service.service_title}</h3>
               <p className="text-center text-muted-foreground">{service.service_description}</p>
             </motion.div>
           ))}
         </section>
       )}
 
-      {/* قسم عرض القائمة */}
+      {/* Menu Preview Section */}
       {menuPreview && (
-        <section className="menu-preview-section mt-10 text-center">
-          <h2 className="text-3xl font-bold mb-4">{menuPreview.title}</h2>
-          <img src={menuPreview.image_url} alt={menuPreview.title} className="mx-auto rounded-lg" />
-          <a href={menuPreview.menu_link} className="mt-4 inline-block text-primary font-semibold underline">
+        <section className="menu-preview-section mt-16 text-center px-4 md:px-0">
+          <h2 className="text-3xl font-bold mb-6">{menuPreview.title}</h2>
+          <img
+            src={menuPreview.image_url || ''}
+            alt={menuPreview.title || 'Menu Preview'}
+            className="mx-auto rounded-lg shadow-md max-w-full h-auto"
+          />
+          <a
+            href={menuPreview.menu_link || '#'}
+            className="mt-6 inline-block text-primary font-semibold underline hover:text-primary-dark transition"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             استعرض القائمة كاملة
           </a>
         </section>
       )}
 
-      {/* قسم التقييمات */}
+      {/* Testimonials Section */}
       {testimonials.length > 0 && (
-        <section className="testimonials-section mt-10">
-          <h2 className="text-3xl font-bold mb-6 text-center">آراء العملاء</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map(testimonial => (
-              <motion.div key={testimonial.id} className="testimonial-card p-6 border rounded-lg shadow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-                <div className="flex items-center mb-4">
-                  <img src={testimonial.client_image} alt={testimonial.client_name} className="w-16 h-16 rounded-full mr-4" />
+        <section className="testimonials-section mt-20 px-4 md:px-0">
+          <h2 className="text-3xl font-bold mb-10 text-center">آراء العملاء</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            {testimonials.map((testimonial) => (
+              <motion.div
+                key={testimonial.id}
+                className="testimonial-card p-6 border rounded-lg shadow-md bg-white"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+              >
+                <div className="flex items-center mb-6">
+                  <img
+                    src={testimonial.client_image || ''}
+                    alt={testimonial.client_name || 'Client'}
+                    className="w-16 h-16 rounded-full mr-4 object-cover"
+                  />
                   <div>
-                    <h3 className="font-semibold">{testimonial.client_name}</h3>
-                    <div className="text-yellow-400">
-                      {'⭐'.repeat(testimonial.rating)}
-                    </div>
+                    <h3 className="font-semibold text-lg">{testimonial.client_name}</h3>
+                    <div className="text-yellow-400">{'⭐'.repeat(testimonial.rating)}</div>
                   </div>
                 </div>
-                <p className="text-muted-foreground">{testimonial.comment}</p>
+                <p className="text-muted-foreground leading-relaxed">{testimonial.comment}</p>
               </motion.div>
             ))}
           </div>

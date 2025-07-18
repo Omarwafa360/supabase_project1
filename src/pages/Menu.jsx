@@ -1,11 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { Helmet } from 'react-helmet';
-import AnimatedPage from '@/components/shared/AnimatedPage';
-import PageHeader from '@/components/shared/PageHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { motion } from 'framer-motion';
+import React, { useEffect, useState } from "react";
+import { Helmet } from "react-helmet";
+import AnimatedPage from "@/components/shared/AnimatedPage";
+import PageHeader from "@/components/shared/PageHeader";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion } from "framer-motion";
+import { useTheme } from '@/context/ThemeContext';
+import { supabase } from '@/supabaseClient';
 
 const Menu = () => {
+  const { pageBackgrounds, pageTypography } = useTheme();
+  const bg = pageBackgrounds.Menu || '#ffffff';
+  const typography = pageTypography.Menu || {};
+
   const [menuCategories, setMenuCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -13,10 +19,18 @@ const Menu = () => {
   useEffect(() => {
     async function fetchMenu() {
       try {
-        const res = await fetch('/api/menu/categories');
-        if (!res.ok) throw new Error('فشل تحميل القائمة');
-        const data = await res.json();
-        setMenuCategories(data);
+        // جلب التصنيفات
+        const { data: categories, error: catError } = await supabase.from('menu_categories').select('*');
+        if (catError) throw catError;
+        // جلب الأصناف
+        const { data: items, error: itemsError } = await supabase.from('menu_items').select('*');
+        if (itemsError) throw itemsError;
+        // ربط الأصناف بالتصنيفات
+        const categoriesWithItems = (categories || []).map(category => ({
+          ...category,
+          items: (items || []).filter(item => item.category_id === category.id)
+        }));
+        setMenuCategories(categoriesWithItems);
       } catch (err) {
         setError(err.message || 'حدث خطأ ما');
       } finally {
@@ -26,75 +40,90 @@ const Menu = () => {
     fetchMenu();
   }, []);
 
+  const pageStyle = {
+    background: bg,
+    fontFamily: typography.fontFamily || 'sans-serif',
+    color: typography.color || '#000',
+    fontSize: typography.fontSize,
+    fontWeight: typography.fontWeight,
+    textAlign: typography.textAlign,
+    minHeight: '100vh',
+  };
+
+  if (loading) {
+    return (
+      <AnimatedPage style={pageStyle}>
+        <div className="text-center text-lg">جاري تحميل القائمة...</div>
+      </AnimatedPage>
+    );
+  }
+
+  if (error) {
+    return (
+      <AnimatedPage style={pageStyle}>
+        <div className="text-center text-red-500 text-lg">خطأ: {error}</div>
+      </AnimatedPage>
+    );
+  }
+
   return (
-    <AnimatedPage>
+    <AnimatedPage style={pageStyle}>
       <Helmet>
         <title>قائمة الطعام | مطعم الأصالة</title>
         <meta
           name="description"
-          content="اكتشف قائمة طعامنا الشاملة من المقبلات والأطباق الرئيسية والمشروبات. أطباق عربية أصيلة بنكهات استثنائية."
+          content="استعرض قائمة مطعم الأصالة المتنوعة من الأطباق الشرقية الأصيلة."
         />
       </Helmet>
+
       <PageHeader
         title="قائمة الطعام"
-        subtitle="اكتشف مجموعة متنوعة من الأطباق العربية الأصيلة المحضرة بأجود المكونات وأفضل الطرق التقليدية."
+        subtitle="استمتع بتجربة طعام لا تُنسى مع أطباقنا الشهية."
       />
 
-      {loading && <p className="text-center py-10">جارٍ تحميل القائمة...</p>}
-      {error && <p className="text-center py-10 text-red-500">{error}</p>}
-
-      {!loading && !error && (
-        <div className="space-y-16">
-          {menuCategories.map((category, categoryIndex) => (
-            <motion.section
-              key={category.id}
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: categoryIndex * 0.2 }}
-            >
-              <div className="text-center mb-8">
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  {/* إذا كان عندك أي أيقونات، تحتاج ترجعها هنا بطريقة مناسبة */}
-                  {/* مثلا: <category.icon className="w-8 h-8 text-primary" /> */}
-                  <h2 className="text-3xl font-bold">{category.name}</h2>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {category.items.map((item, itemIndex) => (
+      <div className="space-y-12">
+        {menuCategories.map((category) => (
+          <section key={category.id} className="menu-category">
+            <h2 className="text-4xl font-bold text-center mb-8 text-primary">
+              {category.name}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {category.items &&
+                category.items.map((item) => (
                   <motion.div
                     key={item.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: itemIndex * 0.1 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
                   >
-                    <Card className="h-full overflow-hidden hover:shadow-xl transition-shadow duration-300">
-                      <div className="relative">
+                    <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                      {item.image_url && (
                         <img
-                          className="w-full h-48 object-cover"
+                          src={item.image_url}
                           alt={item.name}
-                          src={item.image_url} // رابط الصورة من الباك إند
+                          className="w-full h-48 object-cover"
                         />
-                        <div className="absolute top-4 right-4 bg-primary text-primary-foreground px-3 py-1 rounded-full font-bold">
-                          {item.price}
-                        </div>
-                      </div>
+                      )}
                       <CardHeader>
-                        <CardTitle className="text-xl">{item.name}</CardTitle>
+                        <CardTitle className="text-2xl font-semibold">
+                          {item.name}
+                        </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-muted-foreground">{item.description}</p>
+                        <p className="text-muted-foreground mb-4">
+                          {item.description}
+                        </p>
+                        <p className="text-primary text-xl font-bold">
+                          {item.price} ر.س
+                        </p>
                       </CardContent>
                     </Card>
                   </motion.div>
                 ))}
-              </div>
-            </motion.section>
-          ))}
-        </div>
-      )}
+            </div>
+          </section>
+        ))}
+      </div>
     </AnimatedPage>
   );
 };
