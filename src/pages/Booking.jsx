@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import AnimatedPage from '@/components/shared/AnimatedPage';
 import PageHeader from '@/components/shared/PageHeader';
@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { useTheme } from '@/context/ThemeContext'; // استيراد useTheme
-import api from '@/lib/api';
+import { useTheme } from '@/context/ThemeContext';
+import { supabase } from '@/supabaseClient';
 
 const Booking = () => {
   const { pageBackgrounds, pageTypography } = useTheme();
@@ -42,30 +42,29 @@ const Booking = () => {
     setError(null);
 
     try {
-      const result = await api.post('/booking', formData);
-      if (result.success) {
-        toast({
-          title: 'تم إرسال طلب الحجز',
-          description: 'تم استلام طلب حجزك بنجاح. سنتواصل معك قريباً.',
-          variant: 'success',
-        });
-        setFormData({
-          full_name: '',
-          phone_number: '',
-          email: '',
-          reservation_date: '',
-          reservation_time: '',
-          guests_count: '',
-          special_notes: '',
-        });
-      } else {
-        setError(result.message || 'حدث خطأ أثناء إرسال طلب الحجز. الرجاء المحاولة مرة أخرى.');
-        toast({
-          title: 'خطأ في إرسال الطلب',
-          description: result.message || 'حدث خطأ أثناء إرسال طلب الحجز. الرجاء المحاولة مرة أخرى.',
-          variant: 'destructive',
-        });
+      const { data, error } = await supabase
+        .from('booking_requests')
+        .insert([formData]);
+
+      if (error) {
+        throw error;
       }
+
+      toast({
+        title: 'تم إرسال طلب الحجز',
+        description: 'تم استلام طلب حجزك بنجاح. سنتواصل معك قريباً.',
+        variant: 'success',
+      });
+
+      setFormData({
+        full_name: '',
+        phone_number: '',
+        email: '',
+        reservation_date: '',
+        reservation_time: '',
+        guests_count: '',
+        special_notes: '',
+      });
     } catch (err) {
       console.error('Booking form submission error:', err);
       setError('حدث خطأ في الاتصال بالخادم. الرجاء المحاولة لاحقاً.');
