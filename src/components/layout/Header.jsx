@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { NavLink, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChefHat, Menu, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "../ui/button";
 
 const navLinks = [
   { name: "الرئيسية", path: "/" },

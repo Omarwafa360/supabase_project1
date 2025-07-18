@@ -12,21 +12,19 @@ import AdminLogin from "./pages/AdminLogin";
 
 function App() {
   return (
-    <div className="App">
+    <>
       <Header />
-      <main className="pt-20"> {/* عشان ما يغطي الهيدر على المحتوى */}
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/booking" element={<Booking />} />
-          <Route path="/menu" element={<Menu />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/gallery" element={<Gallery />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/admin-login" element={<AdminLogin />} />
-        </Routes>
-      </main>
-    </div>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/booking" element={<Booking />} />
+        <Route path="/menu" element={<Menu />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/gallery" element={<Gallery />} />
+        <Route path="/admin" element={<Admin />} />
+        <Route path="/login" element={<AdminLogin />} />
+      </Routes>
+    </>
   );
 }
 

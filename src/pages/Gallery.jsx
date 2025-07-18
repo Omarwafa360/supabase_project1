@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Helmet } from "react-helmet";
-import AnimatedPage from "@/components/shared/AnimatedPage";
-import PageHeader from "@/components/shared/PageHeader";
+import AnimatedPage from "../components/shared/AnimatedPage";
+import PageHeader from "../components/shared/PageHeader";
 import { motion } from "framer-motion";
 import { useTheme } from '@/context/ThemeContext';
 import { supabase } from '@/supabaseClient';

@@ -3,14 +3,16 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "@/App";
 import { ThemeProvider } from "@/context/ThemeContext";
-import './index.css';
+import './index.css'; // استيراد ملف CSS الرئيسي
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <BrowserRouter basename="/supabase_project1">
+    <BrowserRouter>
       <ThemeProvider>
         <App />
       </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>
 );
+
+

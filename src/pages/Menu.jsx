@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Helmet } from "react-helmet";
-import AnimatedPage from "@/components/shared/AnimatedPage";
-import PageHeader from "@/components/shared/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import AnimatedPage from "../components/shared/AnimatedPage";
+import PageHeader from "../components/shared/PageHeader";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { motion } from "framer-motion";
 import { useTheme } from '@/context/ThemeContext';
 import { supabase } from '@/supabaseClient';

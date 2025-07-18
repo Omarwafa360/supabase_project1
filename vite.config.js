@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 import path from 'path' // استيراد path من Node.js
 
 export default defineConfig({
-  base: '/supabase_project1/',  // مهم للنشر على GitHub Pages بنفس اسم المستودع
   plugins: [react()],
   resolve: {
     alias: {
@@ -39,3 +38,5 @@ export default defineConfig({
     port: 3001
   }
 })
+
+
